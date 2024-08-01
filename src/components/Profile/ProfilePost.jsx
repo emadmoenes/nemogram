@@ -13,17 +13,25 @@ import {
   Text,
   VStack,
   useDisclosure,
+  Input,
+  FormControl,
+  FormLabel,
 } from "@chakra-ui/react";
 import { AiFillHeart } from "react-icons/ai";
 import { FaComment } from "react-icons/fa";
-import { MdDelete } from "react-icons/md";
+import { MdDelete, MdEdit } from "react-icons/md";
 import Comment from "../Comment/Comment";
 import PostFooter from "../FeedPosts/PostFooter";
 import useUserProfileStore from "../../store/userProfileStore";
 import useAuthStore from "../../store/authStore";
 import useShowToast from "../../hooks/useShowToast";
 import { useState } from "react";
-import { deleteObject, ref } from "firebase/storage";
+import {
+  deleteObject,
+  ref,
+  uploadBytes,
+  getDownloadURL,
+} from "firebase/storage";
 import { firestore, storage } from "../../firebase/firebase";
 import { arrayRemove, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import usePostStore from "../../store/postStore";
@@ -31,10 +39,18 @@ import Caption from "../Comment/Caption";
 
 const ProfilePost = ({ post }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
+  const {
+    isOpen: isEditOpen,
+    onOpen: onEditOpen,
+    onClose: onEditClose,
+  } = useDisclosure();
   const userProfile = useUserProfileStore((state) => state.userProfile);
   const authUser = useAuthStore((state) => state.user);
   const showToast = useShowToast();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editCaption, setEditCaption] = useState(post.caption || "");
+  const [editImage, setEditImage] = useState(null);
+  const editPost = usePostStore((state) => state.editPost);
   const deletePost = usePostStore((state) => state.deletePost);
   const decrementPostsCount = useUserProfileStore((state) => state.deletePost);
 
@@ -59,6 +75,35 @@ const ProfilePost = ({ post }) => {
       showToast("Error", error.message, "error");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleEditPost = async () => {
+    if (!editCaption.trim()) {
+      showToast("Error", "Caption cannot be empty", "error");
+      return;
+    }
+
+    try {
+      let imageURL = post.imageURL;
+
+      if (editImage) {
+        const imageRef = ref(storage, `posts/${post.id}`);
+        await uploadBytes(imageRef, editImage);
+        imageURL = await getDownloadURL(imageRef);
+      }
+
+      const postRef = doc(firestore, "posts", post.id);
+      await updateDoc(postRef, {
+        caption: editCaption,
+        imageURL,
+      });
+
+      editPost(post.id, { caption: editCaption, imageURL });
+      showToast("Success", "Post updated successfully", "success");
+      onEditClose();
+    } catch (error) {
+      showToast("Error", error.message, "error");
     }
   };
 
@@ -152,7 +197,7 @@ const ProfilePost = ({ post }) => {
                     <Avatar
                       src={userProfile.profilePicURL}
                       size={"sm"}
-                      name="As a Programmer"
+                      name={userProfile.username}
                     />
                     <Text fontWeight={"bold"} fontSize={12}>
                       {userProfile.username}
@@ -160,17 +205,29 @@ const ProfilePost = ({ post }) => {
                   </Flex>
 
                   {authUser?.uid === userProfile.uid && (
-                    <Button
-                      size={"sm"}
-                      bg={"transparent"}
-                      _hover={{ bg: "whiteAlpha.300", color: "red.600" }}
-                      borderRadius={4}
-                      p={1}
-                      onClick={handleDeletePost}
-                      isLoading={isDeleting}
-                    >
-                      <MdDelete size={20} cursor="pointer" />
-                    </Button>
+                    <Flex gap={2}>
+                      <Button
+                        size={"sm"}
+                        bg={"transparent"}
+                        _hover={{ bg: "whiteAlpha.300", color: "red.600" }}
+                        borderRadius={4}
+                        p={1}
+                        onClick={handleDeletePost}
+                        isLoading={isDeleting}
+                      >
+                        <MdDelete size={20} cursor="pointer" />
+                      </Button>
+                      <Button
+                        size={"sm"}
+                        bg={"transparent"}
+                        _hover={{ bg: "whiteAlpha.300", color: "blue.600" }}
+                        borderRadius={4}
+                        p={1}
+                        onClick={onEditOpen}
+                      >
+                        <MdEdit size={20} cursor="pointer" />
+                      </Button>
+                    </Flex>
                   )}
                 </Flex>
                 <Divider my={4} bg={"gray.500"} />
@@ -193,6 +250,34 @@ const ProfilePost = ({ post }) => {
                 <PostFooter isProfilePage={true} post={post} />
               </Flex>
             </Flex>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+
+      {/* Edit Post Modal */}
+      <Modal isOpen={isEditOpen} onClose={onEditClose} isCentered>
+        <ModalOverlay />
+        <ModalContent>
+          <ModalCloseButton />
+          <ModalBody pb={5}>
+            <FormControl>
+              <FormLabel>Edit Caption</FormLabel>
+              <Input
+                value={editCaption}
+                onChange={(e) => setEditCaption(e.target.value)}
+              />
+            </FormControl>
+            <FormControl mt={4}>
+              <FormLabel>Edit Image</FormLabel>
+              <Input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setEditImage(e.target.files[0])}
+              />
+            </FormControl>
+            <Button mt={4} colorScheme="blue" onClick={handleEditPost}>
+              Save
+            </Button>
           </ModalBody>
         </ModalContent>
       </Modal>

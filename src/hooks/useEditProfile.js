@@ -12,6 +12,7 @@ const useEditProfile = () => {
   const authUser = useAuthStore((state) => state.user);
   const setAuthUser = useAuthStore((state) => state.setUser);
   const setUserProfile = useUserProfileStore((state) => state.setUserProfile);
+  console.log(setUserProfile);
 
   const showToast = useShowToast();
 

@@ -76,7 +76,6 @@ const PostFooter = ({ post, isProfilePage, creatorProfile }) => {
               View all {post.comments.length} comments
             </Text>
           )}
-          {/* COMMENTS MODAL ONLY IN THE HOME PAGE */}
           {isOpen ? (
             <CommentsModal isOpen={isOpen} onClose={onClose} post={post} />
           ) : null}
