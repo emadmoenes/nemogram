@@ -40,7 +40,11 @@ const FeedPosts = () => {
             Looks like you don&apos;t have any friends.
           </Text>
           <Text color={"white"}>Stop coding and go make some Friends!!</Text>
-          <Text color={"white"}>kfaya tw7od b2a😂😂</Text>
+          <Text color={"white"}>follow some user to show posts</Text>
+          <Text color={"white"}>
+            if you are using mobile search on (emad_moanes, mahfouzemad) to find
+            posts
+          </Text>
         </>
       )}
     </Container>
